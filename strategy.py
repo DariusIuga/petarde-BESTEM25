@@ -488,10 +488,6 @@ if __name__ == "__main__":
         print(f"Chosen Word: {chosen_word}")
         print(f"Time taken: {end_time - start_time:.2f} seconds")
 
-    print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
-    get_llm_choice(word)
-    print(f"-------------------------------------------------")
-
     # Uncomment below to run the actual game
     # if register(PLAYER_ID):
     #     play_game(PLAYER_ID)
