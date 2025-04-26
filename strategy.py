@@ -127,16 +127,23 @@ You MUST choose your word from this exact list. Pay close attention to the costs
 
 **Game Rules & Scoring:**
 
-1.  **Objective:** Minimize the final cost after 10 rounds.
-2.  **Gameplay:** In each round, you will be given a 'system word'. You must choose a word from the memorized list above that logically "beats" the system word.
-3.  **Round Costs:**
-    *   **Win:** If your chosen word beats the system word, the cost for the round is just the `cost` of your chosen word (from the memorized list).
-    *   **Loss:** If your chosen word fails to beat the system word, the cost for the round is the `cost` of your chosen word PLUS a `75` penalty. This penalty is very high, so avoiding losses is crucial.
-4.  **Final Score Calculation (Crucial for Strategy):**
-    *   The base score is the sum of all word costs and penalties accumulated over 10 rounds.
-    *   **Win Discount:** You get a 5% discount on the *total base score* for *each round won*. (e.g., 7 wins = 35% discount). Winning rounds significantly reduces the final score.
-    *   **Cheaper Win Bonus:** If both you and the opponent beat the system word in the same round, the player who used the word with the *lower cost* gets a 20% refund *of their word's cost* for that specific round. Winning efficiently is rewarded, but less important than winning itself.
-    *   **Formula:** `Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds`
+1.  Objective: Minimize the final cost after 10 rounds.
+2.  Gameplay: In each round, you will be given a 'system word'. You must choose a word from the memorized list above that logically "beats" the system word.
+3.  Understanding "Beats":
+    - Words can be generally categorized as Offensive (like 'Arrow', 'Dynamite'), Defensive (like 'Shield', 'Kevlar Vest'), or Abstract (like 'War', 'Love', 'Time').
+    - A word "beats" another if it logically overcomes it. This can mean:
+        - An offensive word successfully attacking/destroying the system word (e.g., 'Dynamite' beats 'Tank').
+        - A defensive word successfully defending against or neutralizing the system word (e.g., 'Kevlar Vest' beats 'Bullet', 'Dam' beats 'Flood'). Successfully defending IS considered beating the opponent's word.
+        - An abstract word logically countering another word (e.g., 'Peace' might beat 'War', or 'War' might beat 'Peace' - relationships can be complex or even cyclical).
+    - Your goal is to choose a word that results in a Win according to the game's logic, whether through successful attack, defense, or abstract counter.
+4.  Round Costs:
+    - Win: If your chosen word beats the system word (as defined above), the cost for the round is just the cost of your chosen word (from the memorized list).
+    - Loss: If your chosen word fails to beat the system word, the cost for the round is the cost of your chosen word PLUS a 75 penalty. This penalty is very high, so avoiding losses is crucial.
+5.  Final Score Calculation (Crucial for Strategy):
+    - The base score is the sum of all word costs and penalties accumulated over 10 rounds.
+    - Win Discount: You get a 5% discount on the total base score for each round won. (e.g., 7 wins = 35% discount). Winning rounds significantly reduces the final score.
+    - Cheaper Win Bonus: If both you and the opponent beat the system word in the same round, the player who used the word with the lower cost gets a 20% refund of their word's cost for that specific round. Winning efficiently is rewarded, but less important than winning itself.
+    - Formula: Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds
 
 **Your Task (General):**
 
@@ -207,7 +214,7 @@ def get_llm_choice(system_word: str) -> str:
             system=current_metaprompt,  # Pass the selected metaprompt here
             prompt=prompt,
             stream=False,  # Get the full response at once
-            options={"temperature": 0.5},  # Adjust creativity/determinism
+            options={"temperature": 0.1},  # Adjust creativity/determinism
         )
 
         full_response_text = response.get("response", "").strip()
