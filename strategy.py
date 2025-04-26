@@ -18,7 +18,7 @@ OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
 
 DEBUG = False  # Global debug flag
 
-OLLAMA_TEMPERATURE = 0.25  # Define temperature centrally
+OLLAMA_TEMPERATURE = 0.95  # Define temperature centrally
 
 
 # vllm
@@ -170,7 +170,7 @@ You MUST choose your word from this exact list. Pay close attention to the costs
 
         - An offensive word successfully attacking/destroying the system word (e.g., 'Dynamite' beats 'Tank').
 
-        - A defensive word successfully defending against or neutralizing the system word (e.g., 'Kevlar Vest' beats 'Bullet', 'Dam' beats 'Flood'). Successfully defending IS considered beating the opponent's word.
+        - A defensive word successfully defending against or neutralizing the system word (e.g., 'Kevlar Vest' beats 'Bullet', 'Dam' beats 'Flood' but is overkill for "Rain"). Successfully defending IS considered beating the opponent's word.
 
         - An abstract word logically countering another word (e.g., 'Peace' might beat 'War', or 'War' might beat 'Peace' - relationships can be complex or even cyclical).
 
@@ -192,8 +192,25 @@ SUPER 2. If you aren't satisfied with any word from the list, use H-BOMB for thi
 
 SUPER 3. USE ONLY WORDS FROM THE LIST
 
-SUPER 4. JUST BECAUSE 2 WORDS ARE IN THE SAME SEMANTIC FIELD, IT DOESN'T MEAN THEY BEAT EACH OTHER. FOR EXAMPLE, "KEVLAR VEST" DOESN'T "HELMET" or "SHIELD"
+SUPER 4. JUST BECAUSE 2 WORDS ARE IN THE SAME SEMANTIC FIELD, IT DOESN'T MEAN THEY BEAT EACH OTHER. FOR EXAMPLE, "KEVLAR VEST" DOESN'T BEAT "HELMET" or "SHIELD"
 
+SUPER 5. "FIREWOOD" CAN BE BEATEDN BY "FIRE" NOT BY WATER, JUST BECAUSE IT HAS "FIRE" IN IT IT DOESN'T MEAN IT IS RELATED TO FIRE
+
+SUPER 6. JUST BECAUSE SOMETHING CAN BE AFFECTED BY SOMETHING ELSE IT DOESN'T MEAN IT CAN BEAT/KILL/DESTORY IT
+
+SUPER 7. KEEP IN MIND THE SIZE ORDER. DON'T USE WORDS LIKE H-BOMB ON A STICK AND WORDS LIKE "BEAR TRAP" ON SMALL ANIMALS LIKE "MICE" OR "SPIDERS"
+
+SUPER 8. IF IT IS SOMETHING ALIVE, USE SOMETHING THAT CAN HURT/KILL IT LIKE FIRE, ACID, ETC.
+
+SUPER 9. FOR ELECTRONIC EQUIPMENT, LIKE "CAMERA", "COMPUTER" USE "LIGHTING" OR "SIGNAL JAMMER", THINK BEFORE USING STUFF
+
+SUPER 10. VACUUM IS VACUUM OF THE SPACE, NOT THE VACUUM CLEANER
+
+SUPER 11. SOMETIMES IF YOU HAVE AN ANSWER, MAYBE IT IS MORE SIMPLE, FOR EXAMPLE SOMETIMES IT CAN BE "WATER" INSTEAD OF "FIRE EXTINGUISHER"
+
+SUPER 12. IF IT IS A VERY VERY SMALL OBJECT, LIKE "CRAYON", "PEN", "ACORN", ESPECIALLY IF IT IS ORGANIC, YOU CAN USE SOMETHING LIKE "ACID"
+
+SUPER 13. IF YOU FIND WORDS LIKE "SUPERGLUE", IN THE LIST IT MIGHT BE LISTED AS "SUPER GLUE", SO CHECK
 
 1.  Analyze the `system_word`.
 
@@ -764,27 +781,27 @@ if __name__ == "__main__":
     # Use 5 different words to test the LLM's response time.
 
     
-    #import time
+    import time
 
-    words = ["Terminator", "Lighting Bolt", "Spider-Man", "Mountain", "Deer"]
-    '''
+    words = ["Acorn", "Flood", "Tornado", "Tsunami", "Apple"]
+    
     for word in words:
 
         start_time = time.time()
 
-        # print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
+        print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
 
         chosen_word = get_llm_choice(word)
 
         end_time = time.time()
 
-        # print(f"Chosen Word: {chosen_word}")
+        print(f"Chosen Word: {chosen_word}")
 
-        # print(f"Time taken: {end_time - start_time:.2f} seconds")
-    '''
+        print(f"Time taken: {end_time - start_time:.2f} seconds")
+    
 
     # Uncomment below to run the actual game
 
     # 
     #register(PLAYER_ID)
-    play_game(PLAYER_ID)
+    #play_game(PLAYER_ID)
