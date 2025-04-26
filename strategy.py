@@ -16,7 +16,7 @@ NUM_ROUNDS = 10
 
 OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
 
-DEBUG = True  # Global debug flag
+DEBUG = False  # Global debug flag
 
 OLLAMA_TEMPERATURE = 0.25  # Define temperature centrally
 
@@ -174,23 +174,8 @@ You MUST choose your word from this exact list. Pay close attention to the costs
 
         - An abstract word logically countering another word (e.g., 'Peace' might beat 'War', or 'War' might beat 'Peace' - relationships can be complex or even cyclical).
 
-    - Your goal is to choose a word that results in a Win according to the game's logic, whether through successful attack, defense, or abstract counter.
+    - Your goal is to choose a word that results in a Win according to the game's logic, whether through successful attack, defense, or abstract counter and a word that's in the list.
 
-4.  Round Costs:
-
-    - Win: If your chosen word beats the system word (as defined above), the cost for the round is just the cost of your chosen word (from the memorized list).
-
-    - Loss: If your chosen word fails to beat the system word, the cost for the round is the cost of your chosen word PLUS a 75 penalty. This penalty is very high, so avoiding losses is crucial.
-
-5.  Final Score Calculation (Crucial for Strategy):
-
-    - The base score is the sum of all word costs and penalties accumulated over 10 rounds.
-
-    - Win Discount: You get a 5% discount on the total base score for each round won. (e.g., 7 wins = 35% discount). Winning rounds significantly reduces the final score.
-
-    - Cheaper Win Bonus: If both you and the opponent beat the system word in the same round, the player who used the word with the lower cost gets a 20% refund of their word's cost for that specific round. Winning efficiently is rewarded, but less important than winning itself.
-
-    - Formula: Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds
 
 
 
@@ -201,14 +186,24 @@ You MUST choose your word from this exact list. Pay close attention to the costs
 When I provide you with the `system_word` for the current round, your task is to:
 
 
+SUPER 1. DON'T USE THE WORDS "CHAOS" AND "ORDER" IN YOUR REASONING OR OUTPUT
+
+SUPER 2. If you aren't satisfied with any word from the list, use H-BOMB for things and TIME for concepts.
+
 
 1.  Analyze the `system_word`.
 
 2.  Evaluate the available player words (from the memorized list) based on their likelihood of logically "beating" the system word and their `cost`.
 
-3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word, even if it's slightly more expensive. The 75-point penalty for losing and the 5% win discount make winning very important. Only consider cheaper words if they are *also* very likely to win.
+3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word, even if it's slightly more expensive.
 
 4.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list that balances effectiveness (likelihood of winning) and cost efficiency according to the game rules, with a strong emphasis on winning the round.
+
+5. If you found a word, but it isn't in the memorized list, you should still choose a word from the list that you think is most likely to win. You should always output a valid word from the list.
+
+6. Don't find the perfect antonym if it isn't in the list. You should always output a valid word from the list.
+
+7. You can't output "Chaos".
 
 """
 
@@ -244,6 +239,14 @@ METAPROMPT_DEBUG = (
 4.  **Provide a brief step-by-step reasoning** for your choice, explaining how you weighed effectiveness vs. cost based on the rules, emphasizing why you believe your choice will win.
 
 5.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list.
+
+SUPER 6. USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
+USE ONLY WORDS FROM THE LIST
 
 
 
@@ -305,8 +308,8 @@ def get_llm_choice(system_word: str) -> str:
         f"The opponent played the word '{system_word}'. "
         f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats') and strategy provided in the system prompt (prioritize winning). "
         f"VERY IMPORTANT: Make sure to choose a word from the memorized list."
-        f"If you are unsatisfied with the answer, choose the word from the list that you think is most likely to win."
-        f"VERY IMPORTANT: No matter what, you should output a valid word from the list."
+        f"If you are unsatisfied with the answer, choose the word FROM THE LIST that you think is most likely to win."
+        f"VERY IMPORTANT: No matter what, you should output FROM THE LIST."
         f"{prompt_instruction}"
     )
 
@@ -728,7 +731,7 @@ if __name__ == "__main__":
 
     import time
 
-    words = ["Fire", "Water", "Earthquake", "Love", "Innovation"]
+    words = ["Laptop", "Laplace", "Tissue", "Wolf", "Death"]
 
     for word in words:
 
