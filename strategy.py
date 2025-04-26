@@ -1,5 +1,6 @@
 import json
 import random
+import re  # Import regex module for parsing
 from time import sleep
 
 import ollama  # Import the ollama library
@@ -10,6 +11,7 @@ HOST = "10.81.135.1"  # Make sure this is the correct IP for the tournament
 PLAYER_ID = "petarde_bestem25"  # Choose your unique team ID
 NUM_ROUNDS = 10
 OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
+DEBUG = True  # Global debug flag
 
 # vllm
 
@@ -18,7 +20,7 @@ GET_URL = f"http://{HOST}/get-word"
 STATUS_URL = f"http://{HOST}/status"
 REGISTER_URL = f"http://{HOST}/register"
 
-# --- LLM Metaprompt ---
+# --- LLM Metaprompts ---
 METAPROMPT = """
 You are an AI assistant playing a strategic word game called "Words of Power". Your goal is to help achieve the lowest possible final score over 10 rounds by making smart word choices.
 
@@ -48,6 +50,43 @@ When I provide you with the `system_word` for the current round and the dictiona
 
 Respond *only* with the exact name of the chosen word as it appears in the `PLAYER_WORDS_DATA` keys. Do not include any other text, explanation, or formatting.
 """
+
+METAPROMPT_DEBUG = """
+You are an AI assistant playing a strategic word game called "Words of Power". Your goal is to help achieve the lowest possible final score over 10 rounds by making smart word choices.
+
+**Game Rules & Scoring:**
+
+1.  **Objective:** Minimize the final cost after 10 rounds.
+2.  **Gameplay:** In each round, you will be given a 'system word'. You must choose a word from a provided list (`PLAYER_WORDS_DATA` with associated costs) that logically "beats" the system word.
+3.  **Round Costs:**
+    *   **Win:** If your chosen word beats the system word, the cost for the round is just the `cost` of your chosen word.
+    *   **Loss:** If your chosen word fails to beat the system word, the cost for the round is the `cost` of your chosen word PLUS a `75` penalty.
+4.  **Final Score Calculation (Crucial for Strategy):**
+    *   The base score is the sum of all word costs and penalties accumulated over 10 rounds.
+    *   **Win Discount:** You get a 5% discount on the *total base score* for *each round won*. (e.g., 7 wins = 35% discount). Winning rounds is very important.
+    *   **Cheaper Win Bonus:** If both you and the opponent beat the system word in the same round, the player who used the word with the *lower cost* gets a 20% refund *of their word's cost* for that specific round. Winning efficiently is rewarded.
+    *   **Formula:** `Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds`
+
+**Your Task:**
+
+When I provide you with the `system_word` for the current round and the dictionary of available `PLAYER_WORDS_DATA` (mapping word names to their ID and cost), your task is to:
+
+1.  Analyze the `system_word`.
+2.  Evaluate the available player words based on their likelihood of "beating" the system word and their `cost`.
+3.  Consider the scoring rules: winning is important (for the discount), but winning with a lower-cost word is also beneficial (lower base cost and potential cheaper win bonus).
+4.  **Provide a brief step-by-step reasoning** for your choice, explaining how you weighed effectiveness vs. cost based on the rules.
+5.  Choose the *single best word* from the `PLAYER_WORDS_DATA` list that balances effectiveness (likelihood of winning) and cost efficiency according to the game rules.
+
+**Output Format:**
+
+First, provide your reasoning. Then, on a **new line**, write "Chosen Word:". Finally, on the **very last line**, write *only* the exact name of the chosen word as it appears in the `PLAYER_WORDS_DATA` keys.
+
+Example:
+Reasoning: The system word is 'X'. Word 'A' beats 'X' but is expensive. Word 'B' might beat 'X' and is cheap. Considering the win discount is important, but the penalty for losing is high, I'll choose the safer, more expensive option 'A'.
+Chosen Word:
+A
+"""
+
 
 # --- Player Word Data ---
 # Consider loading this from a JSON file for clarity
@@ -139,28 +178,75 @@ PLAYER_WORDS_BY_ID = {
 def get_llm_choice(system_word: str) -> str:
     """
     Queries the local LLM to choose a word to beat the system_word using the ollama library.
+    If DEBUG is True, also requests and prints reasoning.
     Returns the chosen word name.
     """
-    # Round-specific prompt
+    current_metaprompt = METAPROMPT_DEBUG if DEBUG else METAPROMPT
+
+    # Round-specific prompt - adjust based on DEBUG flag
+    prompt_instruction = (
+        "Respond with your reasoning, then 'Chosen Word:', and finally the chosen word on the last line."
+        if DEBUG
+        else "Respond *only* with the name of the chosen word, exactly as it appears in the list."
+    )
     prompt = (
         f"The opponent played the word '{system_word}'. "
         f"Choose the *single best word* from the following list to beat the opponent's word, considering the game rules (winning is important, lower cost is better). "
         f"Available words (name: cost): { {name: data['cost'] for name, data in PLAYER_WORDS_DATA.items()} } \n"
-        f"Respond *only* with the name of the chosen word, exactly as it appears in the list."
+        f"{prompt_instruction}"
     )
 
     try:
-        # Use ollama.generate with the system prompt (metaprompt)
+        # Use ollama.generate with the selected system prompt (metaprompt)
         response = ollama.generate(
             model=OLLAMA_MODEL,
-            system=METAPROMPT,  # Pass the metaprompt here
+            system=current_metaprompt,  # Pass the selected metaprompt here
             prompt=prompt,
             stream=False,  # Get the full response at once
             options={"temperature": 0.5},  # Adjust creativity/determinism
         )
 
-        # The response structure is slightly different
-        chosen_word_name = response.get("response", "").strip()
+        full_response_text = response.get("response", "").strip()
+        chosen_word_name = ""
+        reasoning = ""
+
+        if DEBUG:
+            # Try to parse reasoning and the word from the last line
+            lines = full_response_text.split("\n")
+            if len(lines) > 1:
+                # Assume the last non-empty line is the word
+                for i in range(len(lines) - 1, -1, -1):
+                    potential_word = lines[i].strip()
+                    if potential_word:  # Found the last non-empty line
+                        chosen_word_name = potential_word
+                        # Join the lines before it as reasoning
+                        reasoning = "\n".join(lines[:i]).strip()
+                        # Remove potential "Chosen Word:" line if present
+                        reasoning = re.sub(
+                            r"Chosen Word:\s*$", "", reasoning, flags=re.MULTILINE
+                        ).strip()
+                        break
+                if not chosen_word_name:  # Fallback if parsing failed somehow
+                    chosen_word_name = (
+                        full_response_text  # Use the whole response as potential word
+                    )
+            else:
+                chosen_word_name = (
+                    full_response_text  # If only one line, assume it's the word
+                )
+
+            if reasoning:
+                print(f"\n--- LLM Reasoning ---")
+                print(reasoning)
+                print(f"---------------------\n")
+            else:
+                print(
+                    f"[DEBUG] Could not parse reasoning from response: {full_response_text}"
+                )
+
+        else:
+            # Standard mode: response is just the word
+            chosen_word_name = full_response_text
 
         # Validate the response
         if chosen_word_name in PLAYER_WORDS_DATA:
@@ -168,7 +254,7 @@ def get_llm_choice(system_word: str) -> str:
             return chosen_word_name
         else:
             print(
-                f"LLM response '{chosen_word_name}' not in player words list. Falling back to random."
+                f"LLM response '{chosen_word_name}' not in player words list (Full Response: '{full_response_text}'). Falling back to random."
             )
             return random.choice(PLAYER_WORD_NAMES)
 
@@ -335,5 +421,13 @@ if __name__ == "__main__":
     #     play_game(PLAYER_ID)
     # else:
     #     print("Failed to register player. Exiting.")
-    word = "tank"
+    word = "tank"  # Example system word for testing
+    print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
     get_llm_choice(word)
+    print(f"-------------------------------------------------")
+
+    # Uncomment below to run the actual game
+    # if register(PLAYER_ID):
+    #     play_game(PLAYER_ID)
+    # else:
+    #     print("Registration failed. Exiting.")
