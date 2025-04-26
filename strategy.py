@@ -8,9 +8,9 @@ import requests
 
 # --- Configuration ---
 
-HOST = "10.81.135.1"  # Make sure this is the correct IP for the tournament
+HOST = "http://10.41.186.9:8000"  # Make sure this is the correct IP for the tournament
 
-PLAYER_ID = "petarde_bestem25"  # Choose your unique team ID
+PLAYER_ID = "MZ3sQVaG"  # Choose your unique team ID
 
 NUM_ROUNDS = 10
 
@@ -24,11 +24,11 @@ OLLAMA_TEMPERATURE = 0.25  # Define temperature centrally
 # vllm
 
 
-POST_URL = f"http://{HOST}/submit-word"
+POST_URL = f"{HOST}/submit-word"
 
-GET_URL = f"http://{HOST}/get-word"
+GET_URL = f"{HOST}/get-word"
 
-STATUS_URL = f"http://{HOST}/status"
+STATUS_URL = f"{HOST}/status"
 
 REGISTER_URL = f"http://{HOST}/register"
 
@@ -190,6 +190,10 @@ SUPER 1. DON'T USE THE WORDS "CHAOS" AND "ORDER" IN YOUR REASONING OR OUTPUT
 
 SUPER 2. If you aren't satisfied with any word from the list, use H-BOMB for things and TIME for concepts.
 
+SUPER 3. USE ONLY WORDS FROM THE LIST
+
+SUPER 4. JUST BECAUSE 2 WORDS ARE IN THE SAME SEMANTIC FIELD, IT DOESN'T MEAN THEY BEAT EACH OTHER. FOR EXAMPLE, "KEVLAR VEST" DOESN'T "HELMET" or "SHIELD"
+
 
 1.  Analyze the `system_word`.
 
@@ -240,13 +244,7 @@ METAPROMPT_DEBUG = (
 
 5.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list.
 
-SUPER 6. USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
-USE ONLY WORDS FROM THE LIST
+
 
 
 
@@ -522,7 +520,7 @@ def what_beats(system_word: str) -> int:
 
     # return random.randint(1, 77)
 
-
+'''
 def play_game(player_id: str):
     """Plays the 10 rounds of the game."""
 
@@ -685,8 +683,8 @@ def play_game(player_id: str):
     except Exception as e:
 
         print(f"Error getting final status: {e}")
-
-
+'''
+'''
 def register(player_id: str):
     """Registers the player ID with the server."""
 
@@ -715,7 +713,43 @@ def register(player_id: str):
         print("Error decoding server response (register).")
 
         return False
+'''
 
+post_url = f"{HOST}/submit-word"
+get_url = f"{HOST}/get-word"
+status_url = f"{HOST}/status"
+
+def play_game(player_id):
+
+    for round_id in range(1, NUM_ROUNDS+1):
+        round_num = -1
+        while round_num != round_id:
+            response = requests.get(get_url)
+            print(response.json())
+            sys_word = response.json()['word']
+            round_num = response.json()['round']
+
+            sleep(1)
+
+        if round_id > 1:
+            status = requests.post(status_url, json={"player_id": player_id})
+            # print(status.json())
+
+        choosen_word = what_beats(sys_word)
+        # print(f"Chosen word: {choosen_word}")
+        data = {"player_id": player_id, "word_id": choosen_word, "round_id": round_id}
+        response = requests.post(post_url, json=data)
+        #print(response.json())
+        
+        
+
+def register(player_id):
+    register_url = f"{HOST}/register"
+    data = {"player_id": player_id}
+    response = requests.post(register_url, json=data)
+    
+    return response.json()
+    
 
 if __name__ == "__main__":
 
@@ -729,30 +763,28 @@ if __name__ == "__main__":
 
     # Use 5 different words to test the LLM's response time.
 
-    import time
+    
+    #import time
 
-    words = ["Laptop", "Laplace", "Tissue", "Wolf", "Death"]
-
+    words = ["Terminator", "Lighting Bolt", "Spider-Man", "Mountain", "Deer"]
+    '''
     for word in words:
 
         start_time = time.time()
 
-        print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
+        # print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
 
         chosen_word = get_llm_choice(word)
 
         end_time = time.time()
 
-        print(f"Chosen Word: {chosen_word}")
+        # print(f"Chosen Word: {chosen_word}")
 
-        print(f"Time taken: {end_time - start_time:.2f} seconds")
+        # print(f"Time taken: {end_time - start_time:.2f} seconds")
+    '''
 
     # Uncomment below to run the actual game
 
-    # if register(PLAYER_ID):
-
-    #     play_game(PLAYER_ID)
-
-    # else:
-
-    #     print("Registration failed. Exiting.")
+    # 
+    #register(PLAYER_ID)
+    play_game(PLAYER_ID)
