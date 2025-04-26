@@ -18,7 +18,7 @@ OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
 
 DEBUG = True  # Global debug flag
 
-OLLAMA_TEMPERATURE = 0.1  # Define temperature centrally
+OLLAMA_TEMPERATURE = 0.25  # Define temperature centrally
 
 
 # vllm
@@ -304,6 +304,9 @@ def get_llm_choice(system_word: str) -> str:
     user_prompt = (
         f"The opponent played the word '{system_word}'. "
         f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats') and strategy provided in the system prompt (prioritize winning). "
+        f"VERY IMPORTANT: Make sure to choose a word from the memorized list."
+        f"If you are unsatisfied with the answer, choose the word from the list that you think is most likely to win."
+        f"VERY IMPORTANT: No matter what, you should output a valid word from the list."
         f"{prompt_instruction}"
     )
 
