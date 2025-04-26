@@ -471,6 +471,9 @@ def register(player_id: str):
 
 
 if __name__ == "__main__":
+    # VERY IMPORTANT: Initialize the chat before using it
+    initialize_chat()
+
     # # Register the player ID
     # if register(PLAYER_ID):
     #     # Start the game
