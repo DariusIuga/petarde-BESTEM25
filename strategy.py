@@ -119,42 +119,43 @@ PLAYER_WORDS_STRING = json.dumps(
 # Updated Metaprompts include the word list and new instructions
 
 METAPROMPT_BASE = f"""
-You are an AI assistant playing a strategic word game called "Words of Power". Your goal is to help achieve the lowest possible final score over 10 rounds by making smart word choices.
+You are an AI assistant playing a strategic word game called "Words of Power". Your goal is to help achieve the lowest possible final score over 10 rounds by making smart word choices based *only* on the rules provided below.
 
 **Memorize this Word List and Costs:**
-You MUST choose your word from this exact list. Pay close attention to the costs.
+You MUST choose your word from this exact list. Pay close attention to the costs. **DO NOT choose any word not on this list.**
 ```json
 {PLAYER_WORDS_STRING}
 ```
 
 **Game Rules & Scoring:**
 
-1.  Objective: Minimize the final cost after 10 rounds.
-2.  Gameplay: In each round, you will be given a 'system word'. You must choose a word from the memorized list above that logically "beats" the system word.
-3.  Understanding "Beats":
-    - Words can be generally categorized as Offensive (like 'Arrow', 'Dynamite'), Defensive (like 'Shield', 'Kevlar Vest'), or Abstract (like 'War', 'Love', 'Time').
-    - A word "beats" another if it logically overcomes it. This can mean:
-        - An offensive word successfully attacking/destroying the system word (e.g., 'Dynamite' beats 'Tank').
-        - A defensive word successfully defending against or neutralizing the system word (e.g., 'Kevlar Vest' beats 'Bullet', 'Dam' beats 'Flood'). Successfully defending IS considered beating the opponent's word.
-        - An abstract word logically countering another word (e.g., 'Peace' might beat 'War', or 'War' might beat 'Peace' - relationships can be complex or even cyclical).
-    - Your goal is to choose a word that results in a Win according to the game's logic, whether through successful attack, defense, or abstract counter.
-4.  Round Costs:
-    - Win: If your chosen word beats the system word (as defined above), the cost for the round is just the cost of your chosen word (from the memorized list).
-    - Loss: If your chosen word fails to beat the system word, the cost for the round is the cost of your chosen word PLUS a 75 penalty. This penalty is very high, so avoiding losses is crucial.
-5.  Final Score Calculation (Crucial for Strategy):
-    - The base score is the sum of all word costs and penalties accumulated over 10 rounds.
-    - Win Discount: You get a 5% discount on the total base score for each round won. (e.g., 7 wins = 35% discount). Winning rounds significantly reduces the final score.
-    - Cheaper Win Bonus: If both you and the opponent beat the system word in the same round, the player who used the word with the lower cost gets a 20% refund of their word's cost for that specific round. Winning efficiently is rewarded, but less important than winning itself.
-    - Formula: Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds
+1.  **Objective:** Minimize the final cost after 10 rounds.
+2.  **Gameplay:** In each round, you will be given a 'system word'. You must choose a word from the memorized list above that logically "beats" the system word according to the definition below.
+3.  **Understanding "Beats" (CRITICAL - Follow ONLY this definition):**
+    *   Words can be generally categorized as Offensive (like 'Arrow', 'Dynamite'), Defensive (like 'Shield', 'Kevlar Vest'), or Abstract (like 'War', 'Love', 'Time').
+    *   A word "beats" another if it logically overcomes it based on real-world concepts or common sense interactions. This can mean:
+        *   An offensive word successfully attacking/destroying the system word (e.g., 'Dynamite' beats 'Tank').
+        *   A defensive word successfully defending against or neutralizing the system word (e.g., 'Kevlar Vest' beats 'Bullet', 'Dam' beats 'Flood'). Successfully defending IS considered beating the opponent's word.
+        *   An abstract word logically countering another word (e.g., 'Peace' might beat 'War', or 'War' might beat 'Peace' - relationships can be complex or even cyclical).
+    *   **IMPORTANT:** The concept of "beats" is based *solely* on this logical interaction. **DO NOT use rules based on shared letters, alphabetical order, word length, or any other criteria.** Your choice must make logical sense as a counter.
+    *   Your goal is to choose a word that results in a **Win** according to the game's logic, whether through successful attack, defense, or abstract counter.
+4.  **Round Costs:**
+    *   **Win:** If your chosen word beats the system word (as defined above), the cost for the round is just the `cost` of your chosen word (from the memorized list).
+    *   **Loss:** If your chosen word fails to beat the system word, the cost for the round is the `cost` of your chosen word PLUS a `75` penalty. This penalty is very high, so avoiding losses is crucial.
+5.  **Final Score Calculation (Crucial for Strategy):**
+    *   The base score is the sum of all word costs and penalties accumulated over 10 rounds.
+    *   **Win Discount:** You get a 5% discount on the *total base score* for *each round won*. (e.g., 7 wins = 35% discount). Winning rounds significantly reduces the final score.
+    *   **Cheaper Win Bonus:** If both you and the opponent beat the system word in the same round, the player who used the word with the *lower cost* gets a 20% refund *of their word's cost* for that specific round. Winning efficiently is rewarded, but less important than winning itself.
+    *   **Formula:** `Final Cost = ((Total Word Costs + 75 * Rounds Lost) * (1 - 0.05 * Rounds Won)) - Total Cheaper Win Refunds`
 
 **Your Task (General):**
 
 When I provide you with the `system_word` for the current round, your task is to:
 
 1.  Analyze the `system_word`.
-2.  Evaluate the available player words (from the memorized list) based on their likelihood of logically "beating" the system word and their `cost`.
-3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word, even if it's slightly more expensive. The 75-point penalty for losing and the 5% win discount make winning very important. Only consider cheaper words if they are *also* very likely to win.
-4.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list that balances effectiveness (likelihood of winning) and cost efficiency according to the game rules, with a strong emphasis on winning the round.
+2.  Evaluate the available player words (from the memorized list) based *only* on their likelihood of logically "beating" (attacking, defending, or countering) the system word according to the definition in Rule 3, and their `cost`.
+3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word according to the "Beats" definition, even if it's slightly more expensive. The 75-point penalty for losing and the 5% win discount make winning very important. Only consider cheaper words if they are *also* very likely to win based on the logical counter rule.
+4.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list that balances effectiveness (likelihood of winning based on Rule 3) and cost efficiency according to the game rules, with a strong emphasis on winning the round. **Stick strictly to the provided word list and the "Beats" definition.**
 """
 
 METAPROMPT = (
@@ -172,51 +173,55 @@ METAPROMPT_DEBUG = (
 **Your Task (Specific for this round):**
 
 1.  Analyze the `system_word`.
-2.  Evaluate the available player words (from the memorized list) based on their likelihood of logically "beating" the system word and their `cost`.
-3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word, even if it's slightly more expensive. The 75-point penalty for losing and the 5% win discount make winning very important. Only consider cheaper words if they are *also* very likely to win.
-4.  **Provide a brief step-by-step reasoning** for your choice, explaining how you weighed effectiveness vs. cost based on the rules, emphasizing why you believe your choice will win.
-5.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list.
+2.  Evaluate the available player words (from the memorized list) based *only* on their likelihood of logically "beating" (attacking, defending, or countering) the system word according to the definition in Rule 3, and their `cost`.
+3.  **Prioritize Winning:** Choose a word that has a high likelihood of beating the system word according to the "Beats" definition, even if it's slightly more expensive. The 75-point penalty for losing and the 5% win discount make winning very important. Only consider cheaper words if they are *also* very likely to win based on the logical counter rule.
+4.  **Provide a brief step-by-step reasoning** for your choice, explaining how you weighed effectiveness vs. cost based *only* on the provided rules (especially Rule 3), emphasizing why you believe your choice will win (by attacking, defending, or countering). **Do not mention letter matching or alphabetical order.**
+5.  Choose the *single best word* from the memorized `PLAYER_WORDS_DATA` list. **Stick strictly to the provided word list and the "Beats" definition.**
 
 **Output Format:**
 
-First, provide your reasoning. Then, on a **new line**, write "Chosen Word:". Finally, on the **very last line**, write *only* the exact name of the chosen word as it appears in the memorized list.
+First, provide your reasoning (based *only* on the logical "beats" concept and costs). Then, on a **new line**, write "Chosen Word:". Finally, on the **very last line**, write *only* the exact name of the chosen word as it appears in the memorized list.
 
 Example:
-Reasoning: The system word is 'Tank'. 'Dynamite' (cost 60) is a very likely counter. 'Acid' (cost 16) is much cheaper but less certain to beat 'Tank'. Given the high penalty for losing (75) and the win discount, the higher certainty of 'Dynamite' makes it the better strategic choice despite the cost.
+Reasoning: The system word is 'Tank'. 'Dynamite' (cost 60) is a very likely offensive counter, as it can destroy a tank. 'Acid' (cost 16) is much cheaper but less certain to effectively destroy a 'Tank'. 'Kevlar Vest' (cost 38) is defensive and irrelevant against a 'Tank'. Given the high penalty for losing (75) and the win discount, the higher certainty of 'Dynamite' logically beating 'Tank' makes it the better strategic choice despite the cost.
 Chosen Word:
 Dynamite
 """
 )
 
+# --- Ollama Chat History ---
 conversation_history = []
 
 
 def initialize_chat():
     """Sets the initial system prompt in the conversation history."""
     global conversation_history
-    conversation_history = [
-        {
-            "role": "system",
-            "content": METAPROMPT_DEBUG if DEBUG else METAPROMPT,
-        }
-    ]
+    # Clear history in case this is called multiple times (e.g., in testing)
+    conversation_history = []
+    # Select the appropriate metaprompt based on the DEBUG flag
+    system_prompt = METAPROMPT_DEBUG if DEBUG else METAPROMPT
+    conversation_history.append({"role": "system", "content": system_prompt})
     print("Chat initialized with system prompt.")
 
 
-# Round specific prompt
 def get_llm_choice(system_word: str) -> str:
-    """Queries the local LLM using the chat endpoint to choose a word. Maintains conversation history. If DEBUG is True, also requests and prints reasoning. Returns the chosen word name."""
+    """
+    Queries the local LLM using the chat endpoint to choose a word.
+    Maintains conversation history.
+    If DEBUG is True, also requests and prints reasoning.
+    Returns the chosen word name.
+    """
     global conversation_history
 
     # Round-specific user prompt
     prompt_instruction = (
-        "Respond with your reasoning, then 'Chosen Word:', and finally the chosen word on the last line."
+        "Respond with your reasoning (based ONLY on the logical 'beats' concept and costs), then 'Chosen Word:', and finally the chosen word on the last line."
         if DEBUG
         else "Respond *only* with the name of the chosen word from the memorized list."
     )
     user_prompt = (
         f"The opponent played the word '{system_word}'. "
-        f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats') and strategy provided in the system prompt (prioritize winning). "
+        f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats' in Rule 3) and strategy provided in the system prompt (prioritize winning). "
         f"{prompt_instruction}"
     )
 
@@ -248,7 +253,7 @@ def get_llm_choice(system_word: str) -> str:
         chosen_word_name = ""
         reasoning = ""
 
-        # --- Parsing Logic (same as before) ---
+        # --- Parsing Logic ---
         if DEBUG:
             lines = full_response_text.split("\n")
             if len(lines) > 1:
@@ -261,10 +266,14 @@ def get_llm_choice(system_word: str) -> str:
                             r"Chosen Word:\s*$", "", reasoning, flags=re.MULTILINE
                         ).strip()
                         break
-                if not chosen_word_name:
-                    chosen_word_name = full_response_text
+                if not chosen_word_name:  # Fallback if parsing failed somehow
+                    chosen_word_name = (
+                        full_response_text  # Use the whole response as potential word
+                    )
             else:
-                chosen_word_name = full_response_text
+                chosen_word_name = (
+                    full_response_text  # If only one line, assume it's the word
+                )
 
             if reasoning:
                 print(f"\n--- LLM Reasoning ---")
@@ -275,14 +284,16 @@ def get_llm_choice(system_word: str) -> str:
                     f"[DEBUG] Could not parse reasoning from response: {full_response_text}"
                 )
         else:
+            # Standard mode: response is just the word
             chosen_word_name = full_response_text
         # --- End Parsing Logic ---
 
-        # --- Validation Logic (same as before) ---
+        # --- Validation Logic ---
         if chosen_word_name in PLAYER_WORDS_DATA:
             print(f"LLM chose: {chosen_word_name}")
             return chosen_word_name
         else:
+            # Attempt to find the closest match in case of minor LLM formatting errors (e.g., extra spaces)
             potential_matches = [
                 name
                 for name in PLAYER_WORD_NAMES
@@ -293,21 +304,18 @@ def get_llm_choice(system_word: str) -> str:
                 print(
                     f"LLM response '{chosen_word_name}' corrected to '{corrected_name}'."
                 )
-                # Update the history with the corrected word? Maybe not necessary, depends on desired strictness.
                 return corrected_name
 
             print(
                 f"LLM response '{chosen_word_name}' not in player words list (Full Response: '{full_response_text}'). Falling back to random."
             )
             # Remove the last user and assistant messages from history on fallback?
-            # This prevents the failed interaction from polluting future context.
             if len(conversation_history) >= 2:
                 conversation_history.pop()  # Remove assistant placeholder/response
                 conversation_history.pop()  # Remove user prompt
             return random.choice(PLAYER_WORD_NAMES)
         # --- End Validation Logic ---
 
-    # Correct indentation for except blocks
     except ollama.ResponseError as e:
         print(
             f"Ollama API Error: {e.error}. Status code: {e.status_code}. Falling back to random."
@@ -316,8 +324,7 @@ def get_llm_choice(system_word: str) -> str:
         if conversation_history and conversation_history[-1]["role"] == "user":
             conversation_history.pop()
         return random.choice(PLAYER_WORD_NAMES)
-
-    except Exception as e:
+    except Exception as e:  # Catch other potential errors (network, etc.)
         print(f"Error querying LLM via ollama chat: {e}. Falling back to random.")
         # Remove the last user message from history on error
         if conversation_history and conversation_history[-1]["role"] == "user":
@@ -335,7 +342,7 @@ def what_beats(system_word: str) -> int:
         return random.randint(1, 77)
 
     # --- LLM Strategy ---
-    chosen_word_name = get_llm_choice(system_word)
+    chosen_word_name = get_llm_choice(system_word)  # Now uses the chat-based function
     chosen_word_id = PLAYER_WORDS_DATA.get(chosen_word_name, {}).get("id")
 
     if chosen_word_id:
@@ -471,24 +478,21 @@ def register(player_id: str):
 
 
 if __name__ == "__main__":
-    # VERY IMPORTANT: Initialize the chat before using it
+    # Initialize the chat history with the system prompt ONCE
     initialize_chat()
 
-    # For testing purposes, call get_llm_choice 5 times with a sample word.
-    # Record the time taken for each call.
-    # Use 5 different words to test the LLM's response time.
     import time
 
-    words = ["Fire", "Water", "Earthquake", "Love", "Innovation"]
+    words = ["Security Camera", "Beer", "Needle", "Flint and Steel", "Human"]
     for word in words:
+        print(f"\n--- Testing system word: {word} ---")
         start_time = time.time()
         print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
         chosen_word = get_llm_choice(word)
         end_time = time.time()
         print(f"Chosen Word: {chosen_word}")
         print(f"Time taken: {end_time - start_time:.2f} seconds")
-
-    # Uncomment below to run the actual game
+    # --- Actual Game ---
     # if register(PLAYER_ID):
     #     play_game(PLAYER_ID)
     # else:
