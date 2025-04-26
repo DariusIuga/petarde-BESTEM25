@@ -219,9 +219,17 @@ def get_llm_choice(system_word: str) -> str:
         if DEBUG
         else "Respond *only* with the name of the chosen word from the memorized list."
     )
+
     user_prompt = (
         f"The opponent played the word '{system_word}'. "
         f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats' in Rule 3) and strategy provided in the system prompt (prioritize winning). "
+        f"""
+        **Memorize this Word List and Costs:**
+        You MUST choose your word from this exact list. Pay close attention to the costs. **DO NOT choose any word not on this list.**
+        ```json
+        {PLAYER_WORDS_STRING}
+        ```
+        """
         f"{prompt_instruction}"
     )
 
