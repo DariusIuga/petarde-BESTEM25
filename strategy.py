@@ -537,205 +537,12 @@ def what_beats(system_word: str) -> int:
 
     # return random.randint(1, 77)
 
-'''
-def play_game(player_id: str):
-    """Plays the 10 rounds of the game."""
-
-    print(f"Starting game for player: {player_id}")
-
-    wins = 0
-
-    total_spent_calculated = 0  # Optional: track cost locally
-
-    for round_id in range(1, NUM_ROUNDS + 1):
-
-        print(f"\n--- Round {round_id} ---")
-
-        current_round_word = ""
-
-        actual_round_num = -1
-
-        # Get the word for the current round
-
-        while actual_round_num != round_id:
-
-            try:
-
-                print("Requesting word...")
-
-                response = requests.get(GET_URL, timeout=10)
-
-                response.raise_for_status()
-
-                data = response.json()
-
-                print(f"Received: {data}")
-
-                current_round_word = data.get("word", "")
-
-                actual_round_num = data.get("round", -1)
-
-                if actual_round_num == round_id:
-
-                    print(f"System word for round {round_id}: '{current_round_word}'")
-
-                    break
-
-                elif actual_round_num > round_id:
-
-                    print(f"Server is ahead (round {actual_round_num}), waiting...")
-
-                elif actual_round_num < round_id and actual_round_num != -1:
-
-                    print(f"Server is behind (round {actual_round_num}), waiting...")
-
-            except requests.exceptions.RequestException as e:
-
-                print(f"Error getting word: {e}")
-
-            except json.JSONDecodeError:
-
-                print("Error decoding server response (get word).")
-
-            sleep(2)  # Wait before retrying
-
-        # Get status of the *previous* round
-
-        if round_id > 1:
-
-            try:
-
-                print("Requesting status...")
-
-                status_response = requests.get(STATUS_URL, timeout=10)
-
-                status_response.raise_for_status()
-
-                status_data = status_response.json()
-
-                print(f"Status received: {status_data}")
-
-                # You could potentially use status_data to adapt strategy
-
-                # e.g., check if your last move won: status_data['players_stats'][player_id]['won']
-
-            except requests.exceptions.RequestException as e:
-
-                print(f"Error getting status: {e}")
-
-            except json.JSONDecodeError:
-
-                print("Error decoding server response (get status).")
-
-            except KeyError:
-
-                print(f"Could not find player '{player_id}' in status.")
-
-        # Choose word and submit
-
-        chosen_word_id = what_beats(current_round_word)
-
-        chosen_word_info = PLAYER_WORDS_BY_ID.get(chosen_word_id)
-
-        # Handle potential None if random fallback chose an invalid ID (shouldn't happen with randint(1,77))
-
-        if not chosen_word_info:
-
-            print(
-                f"Error: Could not get info for chosen_word_id {chosen_word_id}. Choosing random again."
-            )
-
-            chosen_word_id = random.randint(1, 77)
-
-            chosen_word_info = PLAYER_WORDS_BY_ID.get(chosen_word_id)
-
-        print(
-            f"Choosing word ID: {chosen_word_id} ({chosen_word_info['name']}, Cost: {chosen_word_info['cost']})"
-        )
-
-        submit_data = {
-            "player_id": player_id,
-            "word_id": chosen_word_id,
-            "round_id": round_id,
-        }
-
-        try:
-
-            print(f"Submitting word: {submit_data}")
-
-            response = requests.post(POST_URL, json=submit_data, timeout=10)
-
-            response.raise_for_status()
-
-            print(f"Submit Response: {response.json()}")
-
-            # Optional: Update local cost tracking based on response if needed
-
-            # Note: The official score comes from the server/status endpoint
-
-        except requests.exceptions.RequestException as e:
-
-            print(f"Error submitting word: {e}")
-
-        except json.JSONDecodeError:
-
-            print("Error decoding server response (submit word).")
-
-        sleep(1)  # Small delay before next round request
-
-    print("\n--- Game Over ---")
-
-    # Final status check might be useful
-
-    try:
-
-        print("Requesting final status...")
-
-        status_response = requests.get(STATUS_URL, timeout=10)
-
-        status_response.raise_for_status()
-
-        print(f"Final Status: {status_response.json()}")
-
-    except Exception as e:
-
-        print(f"Error getting final status: {e}")
-'''
-'''
-def register(player_id: str):
-    """Registers the player ID with the server."""
-
-    print(f"Registering player: {player_id}")
-
-    data = {"player_id": player_id}
-
-    try:
-
-        response = requests.post(REGISTER_URL, json=data, timeout=10)
-
-        response.raise_for_status()
-
-        print(f"Registration Response: {response.json()}")
-
-        return True
-
-    except requests.exceptions.RequestException as e:
-
-        print(f"Error registering player: {e}")
-
-        return False
-
-    except json.JSONDecodeError:
-
-        print("Error decoding server response (register).")
-
-        return False
-'''
 
 post_url = f"{HOST}/submit-word"
 get_url = f"{HOST}/get-word"
 status_url = f"{HOST}/status"
 
+'''
 def play_game(player_id):
 
     for round_id in range(1, NUM_ROUNDS+1):
@@ -757,7 +564,38 @@ def play_game(player_id):
         data = {"player_id": player_id, "word_id": choosen_word, "round_id": round_id}
         response = requests.post(post_url, json=data)
         #print(response.json())
-        
+'''      
+
+
+def play_game(player_id):
+
+    def get_round():
+        response = requests.get(get_url)
+        print(response.json())
+        sys_word = response.json()['word']
+        round_num = response.json()['round']
+        return (sys_word, round_num)
+
+    submitted_rounds = []
+    round_num = 0
+
+    while round_num != NUM_ROUNDS :
+        print(submitted_rounds)
+        sys_word, round_num = get_round()
+        while round_num == 0 or round_num in submitted_rounds:
+            sys_word, round_num = get_round()
+            sleep(0.5)
+
+        if round_num > 1:
+            status = requests.post(status_url, json={"player_id": player_id}, timeout=2)
+            print(status.json())
+
+        choosen_word = what_beats(sys_word)
+        data = {"player_id": player_id, "word_id": choosen_word, "round_id": round_num}
+        response = requests.post(post_url, json=data, timeout=5)
+        submitted_rounds.append(round_num)
+        print("POST: !!!!!!!!!!!!!!!!")
+        print(response.json())
         
 
 def register(player_id):
@@ -781,27 +619,26 @@ if __name__ == "__main__":
     # Use 5 different words to test the LLM's response time.
 
     
-    import time
+    # import time
 
-    words = ["Acorn", "Flood", "Tornado", "Tsunami", "Apple"]
+    # words = ["Elephant", "Poacher", "Atom", "Blood cell", "Bacteria"]
     
-    for word in words:
+    # for word in words:
 
-        start_time = time.time()
+    #     start_time = time.time()
 
-        print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
+    #     print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
 
-        chosen_word = get_llm_choice(word)
+    #     chosen_word = get_llm_choice(word)
 
-        end_time = time.time()
+    #     end_time = time.time()
 
-        print(f"Chosen Word: {chosen_word}")
+    #     print(f"Chosen Word: {chosen_word}")
 
-        print(f"Time taken: {end_time - start_time:.2f} seconds")
+    #     print(f"Time taken: {end_time - start_time:.2f} seconds")
     
 
     # Uncomment below to run the actual game
 
-    # 
-    #register(PLAYER_ID)
-    #play_game(PLAYER_ID)
+    register(PLAYER_ID)
+    play_game(PLAYER_ID)
