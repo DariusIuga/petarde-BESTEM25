@@ -9,7 +9,7 @@ import requests
 HOST = "10.81.135.1"  # Make sure this is the correct IP for the tournament
 PLAYER_ID = "petarde_bestem25"  # Choose your unique team ID
 NUM_ROUNDS = 10
-OLLAMA_MODEL = "gemma3:4b-it-qat"  # Choose the Ollama model you have running
+OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
 
 # vllm
 
