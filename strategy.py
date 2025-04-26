@@ -12,6 +12,8 @@ PLAYER_ID = "petarde_bestem25"  # Choose your unique team ID
 NUM_ROUNDS = 10
 OLLAMA_MODEL = "gemma3:12b-it-qat"  # Choose the Ollama model you have running
 DEBUG = True  # Global debug flag
+OLLAMA_TEMPERATURE = 0.1  # Define temperature centrally
+
 
 # vllm
 
@@ -186,65 +188,83 @@ Dynamite
 """
 )
 
+conversation_history = []
 
+
+def initialize_chat():
+    """Sets the initial system prompt in the conversation history."""
+    global conversation_history
+    conversation_history = [
+        {
+            "role": "system",
+            "content": METAPROMPT_DEBUG if DEBUG else METAPROMPT,
+        }
+    ]
+    print("Chat initialized with system prompt.")
+
+
+# Round specific prompt
 def get_llm_choice(system_word: str) -> str:
-    """
-    Queries the local LLM to choose a word to beat the system_word using the ollama library.
-    If DEBUG is True, also requests and prints reasoning.
-    Returns the chosen word name.
-    """
-    current_metaprompt = METAPROMPT_DEBUG if DEBUG else METAPROMPT
+    """Queries the local LLM using the chat endpoint to choose a word. Maintains conversation history. If DEBUG is True, also requests and prints reasoning. Returns the chosen word name."""
+    global conversation_history
 
-    # Round-specific prompt - NO LONGER includes the word list
+    # Round-specific user prompt
     prompt_instruction = (
         "Respond with your reasoning, then 'Chosen Word:', and finally the chosen word on the last line."
         if DEBUG
         else "Respond *only* with the name of the chosen word from the memorized list."
     )
-    prompt = (
+    user_prompt = (
         f"The opponent played the word '{system_word}'. "
-        f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules and strategy provided in the system prompt (prioritize winning). "
+        f"Choose the *single best word* from the memorized list to beat the opponent's word, following the rules (especially the definition of 'beats') and strategy provided in the system prompt (prioritize winning). "
         f"{prompt_instruction}"
     )
 
+    # Append user prompt to history
+    conversation_history.append({"role": "user", "content": user_prompt})
+
     try:
-        # Use ollama.generate with the selected system prompt (metaprompt)
-        response = ollama.generate(
+        # Use ollama.chat
+        response = ollama.chat(
             model=OLLAMA_MODEL,
-            system=current_metaprompt,  # Pass the selected metaprompt here
-            prompt=prompt,
-            stream=False,  # Get the full response at once
-            options={"temperature": 0.1},  # Adjust creativity/determinism
+            messages=conversation_history,  # Pass the whole history
+            stream=False,
+            options={"temperature": OLLAMA_TEMPERATURE},
         )
 
-        full_response_text = response.get("response", "").strip()
+        # Extract assistant's response message
+        assistant_message = response.get("message", {})
+        full_response_text = assistant_message.get("content", "").strip()
+
+        # Append assistant's message to history to maintain state
+        if assistant_message:
+            conversation_history.append(assistant_message)
+        else:
+            # Handle case where response structure might be unexpected
+            print("[WARN] No assistant message found in Ollama response.")
+            # Add a placeholder to prevent immediate reuse of the user prompt if error handling retries
+            conversation_history.append({"role": "assistant", "content": ""})
+
         chosen_word_name = ""
         reasoning = ""
 
+        # --- Parsing Logic (same as before) ---
         if DEBUG:
-            # Try to parse reasoning and the word from the last line
             lines = full_response_text.split("\n")
             if len(lines) > 1:
-                # Assume the last non-empty line is the word
                 for i in range(len(lines) - 1, -1, -1):
                     potential_word = lines[i].strip()
-                    if potential_word:  # Found the last non-empty line
+                    if potential_word:
                         chosen_word_name = potential_word
-                        # Join the lines before it as reasoning
                         reasoning = "\n".join(lines[:i]).strip()
-                        # Remove potential "Chosen Word:" line if present
                         reasoning = re.sub(
                             r"Chosen Word:\s*$", "", reasoning, flags=re.MULTILINE
                         ).strip()
                         break
-                if not chosen_word_name:  # Fallback if parsing failed somehow
-                    chosen_word_name = (
-                        full_response_text  # Use the whole response as potential word
-                    )
+                if not chosen_word_name:
+                    chosen_word_name = full_response_text
             else:
-                chosen_word_name = (
-                    full_response_text  # If only one line, assume it's the word
-                )
+                chosen_word_name = full_response_text
 
             if reasoning:
                 print(f"\n--- LLM Reasoning ---")
@@ -254,17 +274,15 @@ def get_llm_choice(system_word: str) -> str:
                 print(
                     f"[DEBUG] Could not parse reasoning from response: {full_response_text}"
                 )
-
         else:
-            # Standard mode: response is just the word
             chosen_word_name = full_response_text
+        # --- End Parsing Logic ---
 
-        # Validate the response
+        # --- Validation Logic (same as before) ---
         if chosen_word_name in PLAYER_WORDS_DATA:
             print(f"LLM chose: {chosen_word_name}")
             return chosen_word_name
         else:
-            # Attempt to find the closest match in case of minor LLM formatting errors (e.g., extra spaces)
             potential_matches = [
                 name
                 for name in PLAYER_WORD_NAMES
@@ -275,21 +293,35 @@ def get_llm_choice(system_word: str) -> str:
                 print(
                     f"LLM response '{chosen_word_name}' corrected to '{corrected_name}'."
                 )
+                # Update the history with the corrected word? Maybe not necessary, depends on desired strictness.
                 return corrected_name
 
             print(
                 f"LLM response '{chosen_word_name}' not in player words list (Full Response: '{full_response_text}'). Falling back to random."
             )
+            # Remove the last user and assistant messages from history on fallback?
+            # This prevents the failed interaction from polluting future context.
+            if len(conversation_history) >= 2:
+                conversation_history.pop()  # Remove assistant placeholder/response
+                conversation_history.pop()  # Remove user prompt
             return random.choice(PLAYER_WORD_NAMES)
+        # --- End Validation Logic ---
 
-    # Catch potential errors from the ollama library
+    # Correct indentation for except blocks
     except ollama.ResponseError as e:
         print(
             f"Ollama API Error: {e.error}. Status code: {e.status_code}. Falling back to random."
         )
+        # Remove the last user message from history on error
+        if conversation_history and conversation_history[-1]["role"] == "user":
+            conversation_history.pop()
         return random.choice(PLAYER_WORD_NAMES)
-    except Exception as e:  # Catch other potential errors (network, etc.)
-        print(f"Error querying LLM via ollama library: {e}. Falling back to random.")
+
+    except Exception as e:
+        print(f"Error querying LLM via ollama chat: {e}. Falling back to random.")
+        # Remove the last user message from history on error
+        if conversation_history and conversation_history[-1]["role"] == "user":
+            conversation_history.pop()
         return random.choice(PLAYER_WORD_NAMES)
 
 
