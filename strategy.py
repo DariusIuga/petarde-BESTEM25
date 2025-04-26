@@ -474,13 +474,20 @@ if __name__ == "__main__":
     # VERY IMPORTANT: Initialize the chat before using it
     initialize_chat()
 
-    # # Register the player ID
-    # if register(PLAYER_ID):
-    #     # Start the game
-    #     play_game(PLAYER_ID)
-    # else:
-    #     print("Failed to register player. Exiting.")
-    word = "tank"  # Example system word for testing
+    # For testing purposes, call get_llm_choice 5 times with a sample word.
+    # Record the time taken for each call.
+    # Use 5 different words to test the LLM's response time.
+    import time
+
+    words = ["Fire", "Water", "Earthquake", "Love", "Innovation"]
+    for word in words:
+        start_time = time.time()
+        print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
+        chosen_word = get_llm_choice(word)
+        end_time = time.time()
+        print(f"Chosen Word: {chosen_word}")
+        print(f"Time taken: {end_time - start_time:.2f} seconds")
+
     print(f"--- Testing get_llm_choice with DEBUG={DEBUG} ---")
     get_llm_choice(word)
     print(f"-------------------------------------------------")
